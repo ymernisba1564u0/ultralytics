@@ -284,7 +284,7 @@ def test_export_ncnn_matrix(task, half, batch):
 
 @pytest.mark.skipif(not TORCH_2_9, reason="IMX export requires torch>=2.9.0")
 @pytest.mark.skipif(
-    not checks.IS_PYTHON_MINIMUM_3_9 and not checks.IS_PYTHON_MINIMUM_3_13, reason="Requires Python>=3.9,<3.13"
+    not checks.IS_PYTHON_MINIMUM_3_9 and checks.IS_PYTHON_MINIMUM_3_13, reason="Requires Python>=3.9,<3.13"
 )
 @pytest.mark.skipif(not LINUX, reason="IMX export only supported on Linux")
 @pytest.mark.skipif(
