@@ -52,7 +52,7 @@ Inference:
                          yolo26n_imx_model          # IMX
                          yolo26n_rknn_model         # RKNN
                          yolo26n_executorch_model   # ExecuTorch
-                         yolo26n_axelera_model      # Axelera
+                         yolo26n_axelera_model      # Axelera AI
                          yolo26n_deepx_model        # DeepX
 
 TensorFlow.js:
