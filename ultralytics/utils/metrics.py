@@ -385,7 +385,7 @@ class ConfusionMatrix(DataExportMixin):
             iou_thres (float, optional): IoU threshold for matching detections to ground truth.
         """
         detections, gt_classes, detection_classes, matches = self._match_detections(detections, batch, conf, iou_thres)
-        gt_cls, gt_bboxes = batch["cls"], batch["bboxes"]
+        gt_cls = batch["cls"], batch["bboxes"]
         if self.matches is not None:  # only if visualization is enabled
             self.matches = {k: defaultdict(list) for k in {"TP", "FP", "FN", "GT"}}
             for i in range(gt_cls.shape[0]):
@@ -425,19 +425,14 @@ class ConfusionMatrix(DataExportMixin):
                 self.matrix[dc, self.nc] += 1  # FP
                 self._append_matches("FP", detections, i)
 
-    @staticmethod
-    def _filter_detection_confidence(detections: dict[str, torch.Tensor], conf: float, is_obb: bool) -> tuple[dict, float]:
-        """Filter detections using the confusion-matrix confidence policy."""
-        conf = 0.25 if conf in {None, 0.01 if is_obb else 0.001} else conf
-        return {k: detections[k][detections["conf"] > conf] for k in detections}, conf
-
     def _match_detections(
         self, detections: dict[str, torch.Tensor], batch: dict[str, Any], conf: float = 0.25, iou_thres: float = 0.45
     ) -> tuple[dict[str, torch.Tensor], list[int], list[int], np.ndarray]:
         """Match detections to GT using the confusion-matrix confidence and IoU policy."""
         gt_cls, gt_bboxes = batch["cls"], batch["bboxes"]
         is_obb = gt_bboxes.shape[1] == 5
-        detections, _ = self._filter_detection_confidence(detections, conf, is_obb)
+        conf = 0.25 if conf in {None, 0.01 if is_obb else 0.001} else conf
+        detections = {k: detections[k][detections["conf"] > conf] for k in detections}
         gt_classes = gt_cls.int().tolist()
         detection_classes = detections["cls"].int().tolist()
         if gt_cls.shape[0] == 0 or detections["cls"].shape[0] == 0:
