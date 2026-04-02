@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-import numpy as np
 import torch
 import torch.distributed as dist
 
@@ -95,7 +94,11 @@ class ReidValidator(BaseValidator):
 
         self._feats.append(emb.cpu())
         self._pids.append(batch["cls"].cpu())
-        self._camids.append(torch.tensor([batch["camid"][i] for i in range(len(batch["camid"]))]) if isinstance(batch["camid"], list) else batch["camid"].cpu())
+        self._camids.append(
+            torch.tensor([batch["camid"][i] for i in range(len(batch["camid"]))])
+            if isinstance(batch["camid"], list)
+            else batch["camid"].cpu()
+        )
 
     def postprocess(self, preds):
         """Extract primary prediction from model output."""
@@ -134,9 +137,9 @@ class ReidValidator(BaseValidator):
         reranking = getattr(self.args, "reid_reranking", False)
         tag = " (re-ranking)" if reranking else ""
         LOGGER.info(f"{'Computing metrics':>22s}   {len(query_pids)} query x {len(gallery_pids)} gallery{tag} ...")
-        self.metrics.process(query_feats, query_pids, query_camids,
-                            gallery_feats, gallery_pids, gallery_camids,
-                            reranking=reranking)
+        self.metrics.process(
+            query_feats, query_pids, query_camids, gallery_feats, gallery_pids, gallery_camids, reranking=reranking
+        )
         return self.metrics.results_dict
 
     def _extract_gallery_features(self, gallery_path: str):
@@ -171,7 +174,9 @@ class ReidValidator(BaseValidator):
             feats.append(emb.cpu())
             pids.append(batch["cls"])
             camids.append(
-                torch.tensor([batch["camid"][i] for i in range(len(batch["camid"]))]) if isinstance(batch["camid"], list) else batch["camid"]
+                torch.tensor([batch["camid"][i] for i in range(len(batch["camid"]))])
+                if isinstance(batch["camid"], list)
+                else batch["camid"]
             )
 
         return (
