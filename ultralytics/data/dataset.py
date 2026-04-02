@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import json
 from collections import defaultdict
 from itertools import repeat
@@ -875,8 +876,6 @@ class ReidDataset:
                 preset name like 'market1501', 'dukemtmc', 'msmt17') and 'cam_0indexed' (bool,
                 whether camera IDs are already 0-indexed, default False).
         """
-        import re as _re
-
         self.root = root
         self.prefix = colorstr(f"{prefix}: ") if prefix else ""
         self.samples = []  # (filepath, pid, camid)
@@ -890,7 +889,7 @@ class ReidDataset:
         data = data or {}
         re_str = data.get("filename_re", "market1501")
         re_str = self.PATTERNS.get(re_str, re_str)  # resolve preset name or use as-is
-        pattern = _re.compile(re_str, _re.IGNORECASE)
+        pattern = re.compile(re_str, re.IGNORECASE)
         cam_offset = 0 if data.get("cam_0indexed", False) else -1  # convert to 0-indexed
 
         raw_pids = set()
@@ -923,7 +922,9 @@ class ReidDataset:
             label = self.pid_to_label.get(pid, pid)
             self.pid_to_indices[label].append(idx)
 
-        LOGGER.info(f"{self.prefix}{len(self.samples)} images, {len(set(pid for _, pid, _ in self.samples))} identities")
+        LOGGER.info(
+            f"{self.prefix}{len(self.samples)} images, {len(set(pid for _, pid, _ in self.samples))} identities"
+        )
 
         scale = (1.0 - args.scale, 1.0)
         self.torch_transforms = (
