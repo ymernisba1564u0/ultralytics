@@ -241,7 +241,7 @@ You can pass a preprocessed [PyTorch](https://www.ultralytics.com/glossary/pytor
     from ultralytics import YOLO
 
     # Load model
-    model = YOLO("yolo11n.pt")
+    model = YOLO("yolo26n.pt")
 
     # Create DALI iterator
     pipe = yolo_dali_pipeline_centered(image_dir="/path/to/images", target_size=640)
@@ -316,7 +316,7 @@ For real-time video processing, use `fn.external_source` to feed frames from any
 
         from ultralytics import YOLO
 
-        model = YOLO("yolo11n.engine")  # TensorRT model
+        model = YOLO("yolo26n.engine")  # TensorRT model
 
         pipe = yolo_video_pipeline(target_size=640)
         pipe.build()
@@ -332,7 +332,9 @@ For real-time video processing, use `fn.external_source` to feed frames from any
             pipe.feed_input("input", [np.array(frame_rgb)])
             (output,) = pipe.run()
 
-            # Convert to torch tensor and run inference
+            # Convert DALI output to torch tensor for inference
+            # Note: this GPU->CPU->GPU copy is required when using feed_input with pipe.run()
+            # For reader-based pipelines, use DALIGenericIterator for direct GPU->GPU transfer
             tensor = torch.tensor(output.as_cpu().as_array()).to("cuda")
             results = model.predict(tensor, verbose=False)
         ```
@@ -413,7 +415,7 @@ Serialize the DALI pipeline for the Triton DALI backend:
     ```python
     from ultralytics import YOLO
 
-    model = YOLO("yolo11n.pt")
+    model = YOLO("yolo26n.pt")
     model.export(format="engine", imgsz=640, half=True, batch=8)
     # Copy the .engine file to model_repository/yolo_trt/1/model.plan
     ```
@@ -459,7 +461,7 @@ output [
   {
     name: "output0"
     data_type: TYPE_FP32
-    dims: [ 84, 8400 ]
+    dims: [ 300, 6 ]
   }
 ]
 ```
@@ -481,7 +483,7 @@ output [
   {
     name: "OUTPUT"
     data_type: TYPE_FP32
-    dims: [ 84, 8400 ]
+    dims: [ 300, 6 ]
   }
 ]
 ensemble_scheduling {
@@ -537,9 +539,14 @@ ensemble_scheduling {
     input_tensor.set_data_from_numpy(image_data)
 
     # Run inference through the ensemble
+    # Run inference through the ensemble
     result = client.infer(model_name="ensemble_dali_yolo", inputs=[input_tensor])
-    output = result.as_numpy("OUTPUT")  # Shape: (1, 84, 8400)
-    print(f"Output shape: {output.shape}")
+    detections = result.as_numpy("OUTPUT")  # Shape: (1, 300, 6) -> [x1, y1, x2, y2, conf, class_id]
+
+    # Filter by confidence (no NMS needed — YOLO26 is end-to-end)
+    detections = detections[0]  # First image
+    detections = detections[detections[:, 4] > 0.25]  # Confidence threshold
+    print(f"Detected {len(detections)} objects")
     ```
 
 !!! tip "Batching JPEG Images"
