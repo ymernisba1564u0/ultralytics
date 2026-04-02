@@ -216,7 +216,6 @@ This version exactly replicates the default Ultralytics preprocessing with cente
 !!! example "Build and run a DALI pipeline"
 
     ```python
-
     # Build and run the pipeline
     pipe = yolo_dali_pipeline_centered(image_dir="/path/to/images", target_size=640)
     pipe.build()
