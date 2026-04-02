@@ -194,14 +194,45 @@ class OCSORT(BYTETracker):
         return [OCSortTrack(xywh, s, c, self.delta_t) for (xywh, s, c) in zip(bboxes, results.conf, results.cls)]
 
     def get_dists(self, tracks, detections):
-        """Compute cost matrix with Buffered IoU distance and OCM velocity direction consistency cost."""
+        """Compute cost matrix with Buffered IoU, OCM velocity cost, and aspect-ratio gating."""
         dists = self._biou_distance(tracks, detections)
         if self.args.fuse_score:
             dists = matching.fuse_score(dists, detections)
 
         vel_dists = self._velocity_direction_cost(tracks, detections)
         dists = dists + self.inertia * vel_dists
+
+        # Aspect-ratio gating (BoostTrack): penalize shape-inconsistent matches
+        ar_penalty = self._aspect_ratio_penalty(tracks, detections)
+        dists = np.where(ar_penalty > 0.6, 1.0, dists)
         return dists
+
+    @staticmethod
+    def _aspect_ratio_penalty(tracks, detections):
+        """Compute aspect-ratio difference between tracks and detections.
+
+        Returns matrix where entry (i,j) = |log(ar_track_i) - log(ar_det_j)|.
+        """
+        n_tracks, n_dets = len(tracks), len(detections)
+        if n_tracks == 0 or n_dets == 0:
+            return np.zeros((n_tracks, n_dets), dtype=np.float32)
+
+        def _get_ar(item):
+            if isinstance(item, np.ndarray):
+                if len(item) >= 4:
+                    w = item[2] - item[0] if len(item) == 4 else item[2]
+                    h = item[3] - item[1] if len(item) == 4 else item[3]
+                else:
+                    return 1.0
+            else:
+                xyxy = item.xyxy
+                w = xyxy[2] - xyxy[0]
+                h = xyxy[3] - xyxy[1]
+            return max(w, 1.0) / max(h, 1.0)
+
+        track_ars = np.array([np.log(_get_ar(t)) for t in tracks], dtype=np.float32)
+        det_ars = np.array([np.log(_get_ar(d)) for d in detections], dtype=np.float32)
+        return np.abs(track_ars[:, None] - det_ars[None, :])
 
     @staticmethod
     def _biou_distance(tracks, detections, buffer_ratio=0.5):
