@@ -13,7 +13,7 @@ from ultralytics.utils import LOGGER
 
 def torch2openvino(
     model: torch.nn.Module,
-    im: torch.Tensor,
+    im: torch.Tensor | list[torch.Tensor] | tuple[torch.Tensor],
     file: Path | str | None = None,
     dynamic: bool = False,
     half: bool = False,
@@ -26,7 +26,7 @@ def torch2openvino(
 
     Args:
         model (torch.nn.Module): The model to export (may be NMS-wrapped).
-        im (torch.Tensor): Example input tensor.
+        im (torch.Tensor | list[torch.Tensor] | tuple[torch.Tensor]): Example input tensor(s) for tracing.
         file (Path | str | None): Source model path used to derive output directory.
         dynamic (bool): Whether to use dynamic input shapes.
         half (bool): Whether to compress to FP16.
@@ -42,7 +42,8 @@ def torch2openvino(
 
     LOGGER.info(f"\n{prefix} starting export with openvino {ov.__version__}...")
 
-    ov_model = ov.convert_model(model, input=None if dynamic else [im.shape], example_input=im)
+    input_shape = [i.shape for i in im] if isinstance(im, (list, tuple)) else im.shape
+    ov_model = ov.convert_model(model, input=None if dynamic else input_shape, example_input=im)
     if int8:
         import nncf
 
