@@ -764,9 +764,13 @@ class Exporter:
         """Export YOLO model to MNN format using MNN https://github.com/alibaba/MNN."""
         from ultralytics.utils.export.mnn import onnx2mnn
 
-        f_onnx = self.export_onnx()
         return onnx2mnn(
-            f_onnx, self.file, half=self.args.half, int8=self.args.int8, metadata=self.metadata, prefix=prefix
+            onnx_file=self.export_onnx(),
+            output_file=self.file.with_suffix(".mnn"),
+            half=self.args.half,
+            int8=self.args.int8,
+            metadata=self.metadata,
+            prefix=prefix,
         )
 
     @try_export
