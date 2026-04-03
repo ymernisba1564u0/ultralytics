@@ -180,7 +180,7 @@ def tflite2edgetpu(tflite_file: str | Path, output_dir: str | Path, prefix: str 
         f'"{tflite_file}"'
     )
     LOGGER.info(f"{prefix} running '{cmd}'")
-    subprocess.run(cmd, shell=True)
+    subprocess.run(cmd, shell=True, check=True)
 
 
 def pb2tfjs(pb_file: str, output_dir: str, half: bool = False, int8: bool = False, prefix: str = ""):
@@ -217,7 +217,7 @@ def pb2tfjs(pb_file: str, output_dir: str, half: bool = False, int8: bool = Fals
             f'--input_format=tf_frozen_model {quantization} --output_node_names={outputs} "{fpb_}" "{f_}"'
         )
         LOGGER.info(f"{prefix} running '{cmd}'")
-        subprocess.run(cmd, shell=True)
+        subprocess.run(cmd, shell=True, check=True)
 
     if " " in output_dir:
         LOGGER.warning(f"{prefix} your model may not work correctly with spaces in path '{output_dir}'.")

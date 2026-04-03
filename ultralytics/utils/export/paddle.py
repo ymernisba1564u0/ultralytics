@@ -53,4 +53,4 @@ def torch2paddle(
     pytorch2paddle(module=model, save_dir=f, jit_type="trace", input_examples=[im])  # export
     if metadata:
         YAML.save(Path(f) / "metadata.yaml", metadata)  # add metadata.yaml
-    return f
+    return str(f)

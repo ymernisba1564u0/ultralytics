@@ -21,7 +21,7 @@ def torch2openvino(
     calibration_dataset: Any | None = None,
     ignored_scope: dict | None = None,
     prefix: str = "",
-) -> str:
+):
     """Export a PyTorch model to OpenVINO format with optional INT8 quantization.
 
     Args:

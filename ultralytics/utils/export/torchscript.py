@@ -17,7 +17,7 @@ def torch2torchscript(
     optimize: bool = False,
     metadata: dict | None = None,
     prefix: str = "",
-) -> Path:
+) -> str:
     """Export a PyTorch model to TorchScript format.
 
     Args:

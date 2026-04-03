@@ -40,7 +40,7 @@ def _executorch_kpts_decode(self, kpts: torch.Tensor, is_pose26: bool = False) -
 def torch2executorch(
     model: torch.nn.Module,
     file: Path | str,
-    sample_input: torch.Tensor,
+    im: torch.Tensor,
     metadata: dict | None = None,
     prefix: str = "",
 ) -> str:
@@ -49,7 +49,7 @@ def torch2executorch(
     Args:
         model (torch.nn.Module): The PyTorch model to export.
         file (Path | str): Source model file path used to derive output names.
-        sample_input (torch.Tensor): Example input tensor for tracing/export.
+        im (torch.Tensor): Example input tensor for tracing/export.
         metadata (dict | None, optional): Optional metadata to save as YAML.
         prefix (str, optional): Prefix for log messages.
 
@@ -68,7 +68,7 @@ def torch2executorch(
 
     pte_file = output_dir / file.with_suffix(".pte").name
     et_program = to_edge_transform_and_lower(
-        torch.export.export(model, (sample_input,)),
+        torch.export.export(model, (im,)),
         partitioner=[XnnpackPartitioner()],
     ).to_executorch()
     pte_file.write_bytes(et_program.buffer)
