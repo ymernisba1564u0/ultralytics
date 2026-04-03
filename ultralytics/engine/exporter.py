@@ -1033,7 +1033,13 @@ class Exporter:
         check_executorch_requirements()
         from ultralytics.utils.export.executorch import torch2executorch
 
-        return torch2executorch(self.model, self.file, self.im, metadata=self.metadata, prefix=prefix)
+        return torch2executorch(
+            model=self.model,
+            im=self.im,
+            output_dir=str(self.file).replace(self.file.suffix, "_executorch_model/"),
+            metadata=self.metadata,
+            prefix=prefix,
+        )
 
     @try_export
     def export_edgetpu(self, tflite_model="", prefix=colorstr("Edge TPU:")):
