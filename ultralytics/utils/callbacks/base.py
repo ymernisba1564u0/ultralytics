@@ -8,67 +8,67 @@ from copy import deepcopy
 
 
 def on_pretrain_routine_start(trainer):
-    """Called at the beginning of the pre-training routine, before data loading and model setup."""
+    """Called before the pretraining routine starts."""
     pass
 
 
 def on_pretrain_routine_end(trainer):
-    """Called at the end of the pre-training routine, after data loading and model setup are complete."""
+    """Called after the pretraining routine ends."""
     pass
 
 
 def on_train_start(trainer):
-    """Called when the training starts, before the first epoch begins."""
+    """Called when the training starts."""
     pass
 
 
 def on_train_epoch_start(trainer):
-    """Called at the start of each training epoch, before batch iteration begins."""
+    """Called at the start of each training epoch."""
     pass
 
 
 def on_train_batch_start(trainer):
-    """Called at the start of each training batch, before the forward pass."""
+    """Called at the start of each training batch."""
     pass
 
 
 def optimizer_step(trainer):
-    """Called during the optimizer step. Reserved for custom integrations; not called by default."""
+    """Called when the optimizer takes a step."""
     pass
 
 
 def on_before_zero_grad(trainer):
-    """Called before the gradients are set to zero. Reserved for custom integrations; not called by default."""
+    """Called before the gradients are set to zero."""
     pass
 
 
 def on_train_batch_end(trainer):
-    """Called at the end of each training batch, after the backward pass and optimizer step."""
+    """Called at the end of each training batch."""
     pass
 
 
 def on_train_epoch_end(trainer):
-    """Called at the end of each training epoch, after all batches but before validation."""
+    """Called at the end of each training epoch."""
     pass
 
 
 def on_fit_epoch_end(trainer):
-    """Called at the end of each fit epoch (train + val), after validation and model saving."""
+    """Called at the end of each fit epoch (train + val)."""
     pass
 
 
 def on_model_save(trainer):
-    """Called when the model checkpoint is saved, after validation."""
+    """Called when the model is saved."""
     pass
 
 
 def on_train_end(trainer):
-    """Called when the training ends, after final evaluation of the best model."""
+    """Called when the training ends."""
     pass
 
 
 def on_params_update(trainer):
-    """Called when the model parameters are updated. Reserved for custom integrations; not called by default."""
+    """Called when the model parameters are updated."""
     pass
 
 
