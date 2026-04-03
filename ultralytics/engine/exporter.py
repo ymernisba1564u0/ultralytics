@@ -779,9 +779,9 @@ class Exporter:
         from ultralytics.utils.export.ncnn import torch2ncnn
 
         return torch2ncnn(
-            self.model,
-            self.im,
-            self.file,
+            model=self.model,
+            im=self.im,
+            output_dir=str(self.file).replace(self.file.suffix, "_ncnn_model/"),
             half=self.args.half,
             metadata=self.metadata,
             device=self.device,
