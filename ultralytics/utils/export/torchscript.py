@@ -17,7 +17,7 @@ def torch2torchscript(
     optimize: bool = False,
     metadata: dict | None = None,
     prefix: str = "",
-) -> Path:
+) -> str:
     """Export a PyTorch model to TorchScript format.
 
     Args:
@@ -29,10 +29,9 @@ def torch2torchscript(
         prefix (str): Prefix for log messages.
 
     Returns:
-        (Path): Path to the exported ``.torchscript`` file.
+        (str): Path to the exported ``.torchscript`` file.
     """
     LOGGER.info(f"\n{prefix} starting export with torch {TORCH_VERSION}...")
-    output_file = Path(output_file)
 
     ts = torch.jit.trace(model, im, strict=False)
     extra_files = {"config.txt": json.dumps(metadata or {})}  # torch._C.ExtraFilesMap()
@@ -43,4 +42,4 @@ def torch2torchscript(
         optimize_for_mobile(ts)._save_for_lite_interpreter(output_file, _extra_files=extra_files)
     else:
         ts.save(output_file, _extra_files=extra_files)
-    return output_file
+    return str(output_file)
