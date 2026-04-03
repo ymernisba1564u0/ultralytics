@@ -42,7 +42,7 @@ def torch2openvino(
 
     LOGGER.info(f"\n{prefix} starting export with openvino {ov.__version__}...")
 
-    input_shape = [i.shape for i in im] if isinstance(im, (list, tuple)) else im.shape
+    input_shape = [i.shape for i in im] if isinstance(im, (list, tuple)) else [im.shape]
     ov_model = ov.convert_model(model, input=None if dynamic else input_shape, example_input=im)
     if int8:
         import nncf
