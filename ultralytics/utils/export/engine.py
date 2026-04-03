@@ -46,7 +46,7 @@ def best_onnx_opset(onnx: types.ModuleType, cuda: bool = False) -> int:
 def torch2onnx(
     model: torch.nn.Module,
     im: torch.Tensor | tuple[torch.Tensor],
-    onnx_file: str,
+    output_file: Path | str,
     opset: int = 14,
     input_names: list[str] = ["images"],
     output_names: list[str] = ["output0"],
@@ -57,7 +57,7 @@ def torch2onnx(
     Args:
         model (torch.nn.Module): The PyTorch model to export.
         im (torch.Tensor | tuple[torch.Tensor]): Example input tensor(s) for tracing.
-        onnx_file (str): Path to save the exported ONNX file.
+        output_file (Path | str): Path to save the exported ONNX file.
         opset (int): ONNX opset version to use for export.
         input_names (list[str]): List of input tensor names.
         output_names (list[str]): List of output tensor names.
@@ -70,7 +70,7 @@ def torch2onnx(
     torch.onnx.export(
         model,
         im,
-        onnx_file,
+        output_file,
         verbose=False,
         opset_version=opset,
         do_constant_folding=True,  # WARNING: DNN inference with torch>=1.12 may require do_constant_folding=False
@@ -83,7 +83,7 @@ def torch2onnx(
 
 def onnx2engine(
     onnx_file: str,
-    engine_file: str | None = None,
+    output_file: Path | str | None = None,
     workspace: int | None = None,
     half: bool = False,
     int8: bool = False,
@@ -99,7 +99,7 @@ def onnx2engine(
 
     Args:
         onnx_file (str): Path to the ONNX file to be converted.
-        engine_file (str | None): Path to save the generated TensorRT engine file.
+        output_file (Path | str | None): Path to save the generated TensorRT engine file.
         workspace (int | None): Workspace size in GB for TensorRT.
         half (bool, optional): Enable FP16 precision.
         int8 (bool, optional): Enable INT8 precision.
@@ -122,7 +122,7 @@ def onnx2engine(
     """
     import tensorrt as trt
 
-    engine_file = engine_file or Path(onnx_file).with_suffix(".engine")
+    output_file = output_file or Path(onnx_file).with_suffix(".engine")
 
     logger = trt.Logger(trt.Logger.INFO)
     if verbose:
@@ -178,7 +178,7 @@ def onnx2engine(
         if int8 and not is_trt10:  # deprecated in TensorRT 10, causes internal errors
             config.set_calibration_profile(profile)
 
-    LOGGER.info(f"{prefix} building {'INT8' if int8 else 'FP' + ('16' if half else '32')} engine as {engine_file}")
+    LOGGER.info(f"{prefix} building {'INT8' if int8 else 'FP' + ('16' if half else '32')} engine as {output_file}")
     if int8:
         config.set_flag(trt.BuilderFlag.INT8)
         config.profiling_verbosity = trt.ProfilingVerbosity.DETAILED
@@ -263,14 +263,14 @@ def onnx2engine(
         engine = builder.build_serialized_network(network, config)
         if engine is None:
             raise RuntimeError("TensorRT engine build failed, check logs for errors")
-        with open(engine_file, "wb") as t:
+        with open(output_file, "wb") as t:
             if metadata is not None:
                 meta = json.dumps(metadata)
                 t.write(len(meta).to_bytes(4, byteorder="little", signed=True))
                 t.write(meta.encode())
             t.write(engine)
     else:
-        with builder.build_engine(network, config) as engine, open(engine_file, "wb") as t:
+        with builder.build_engine(network, config) as engine, open(output_file, "wb") as t:
             if metadata is not None:
                 meta = json.dumps(metadata)
                 t.write(len(meta).to_bytes(4, byteorder="little", signed=True))
