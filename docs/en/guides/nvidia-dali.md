@@ -8,7 +8,7 @@ keywords: NVIDIA DALI, GPU preprocessing, Ultralytics, YOLO, YOLO26, TensorRT, T
 
 ## Introduction
 
-When deploying [Ultralytics YOLO](../models/index.md) models in production, [preprocessing](https://www.ultralytics.com/glossary/image-preprocessing) often becomes the bottleneck. While [TensorRT](../integrations/tensorrt.md) can run model [inference](../modes/predict.md) in just a few milliseconds, the CPU-based preprocessing (resize, pad, normalize) can take 2-10ms per image, especially at high resolutions. [NVIDIA DALI](https://docs.nvidia.com/deeplearning/dali/user-guide/docs/index.html) (Data Loading Library) solves this by moving the entire preprocessing pipeline to the GPU.
+When deploying [Ultralytics YOLO](../models/index.md) models in production, [preprocessing](https://www.ultralytics.com/glossary/data-preprocessing) often becomes the bottleneck. While [TensorRT](../integrations/tensorrt.md) can run model [inference](../modes/predict.md) in just a few milliseconds, the CPU-based preprocessing (resize, pad, normalize) can take 2-10ms per image, especially at high resolutions. [NVIDIA DALI](https://docs.nvidia.com/deeplearning/dali/user-guide/docs/index.html) (Data Loading Library) solves this by moving the entire preprocessing pipeline to the GPU.
 
 This guide walks you through building DALI pipelines that exactly replicate Ultralytics YOLO preprocessing, integrating them with `model.predict()`, processing video streams, and deploying end-to-end with [Triton Inference Server](triton-inference-server.md).
 
@@ -27,8 +27,8 @@ This guide walks you through building DALI pipelines that exactly replicate Ultr
 In a typical YOLO inference pipeline, the preprocessing steps run on the CPU:
 
 1. **Decode** the image (JPEG/PNG)
-2. **Resize** while preserving [aspect ratio](https://www.ultralytics.com/glossary/aspect-ratio)
-3. **Pad** to the target size ([letterbox](https://www.ultralytics.com/glossary/letterboxing))
+2. **Resize** while preserving aspect ratio
+3. **Pad** to the target size (letterbox)
 4. **Normalize** pixel values from `[0, 255]` to `[0, 1]`
 5. **Convert** layout from HWC to CHW
 
@@ -94,7 +94,7 @@ The full preprocessing pipeline in [`ultralytics/engine/predictor.py`](https://g
 | 3    | BGR → RGB                  | `im[..., ::-1]`                 | `fn.decoders.image(output_type=types.RGB)`    |
 | 4    | HWC → CHW + normalize /255 | `np.transpose` + `tensor / 255` | `fn.crop_mirror_normalize(std=[255,255,255])` |
 
-The letterbox operation preserves the [aspect ratio](https://www.ultralytics.com/glossary/aspect-ratio) by:
+The letterbox operation preserves the aspect ratio by:
 
 1. Computing scale: `r = min(target_h / h, target_w / w)`
 2. Resizing to `(round(w * r), round(h * r))`
@@ -209,7 +209,7 @@ This version exactly replicates the default Ultralytics preprocessing with cente
 
 !!! warning "Antialias Mismatch"
 
-    DALI's `fn.resize` enables [antialiasing](https://www.ultralytics.com/glossary/anti-aliasing) by default (`antialias=True`), while OpenCV's `cv2.resize` with `INTER_LINEAR` does **not** apply antialiasing. Always set `antialias=False` in DALI to match the CPU pipeline. Omitting this causes subtle numerical differences that can affect [model accuracy](https://www.ultralytics.com/glossary/accuracy).
+    DALI's `fn.resize` enables antialiasing by default (`antialias=True`), while OpenCV's `cv2.resize` with `INTER_LINEAR` does **not** apply antialiasing. Always set `antialias=False` in DALI to match the CPU pipeline. Omitting this causes subtle numerical differences that can affect [model accuracy](https://www.ultralytics.com/glossary/accuracy).
 
 ### Running the Pipeline
 
@@ -574,7 +574,7 @@ DALI preprocessing works with all YOLO tasks that use the standard `LetterBox` p
 | [Segmentation](../tasks/segment.md)         | ✅        | Same preprocessing as detection                                                                              |
 | [Pose Estimation](../tasks/pose.md)         | ✅        | Same preprocessing as detection                                                                              |
 | [Oriented Detection (OBB)](../tasks/obb.md) | ✅        | Same preprocessing as detection                                                                              |
-| [Classification](../tasks/classify.md)      | ❌        | Uses [torchvision](https://www.ultralytics.com/glossary/torchvision) transforms (center crop), not letterbox |
+| [Classification](../tasks/classify.md)      | ❌        | Uses torchvision transforms (center crop), not letterbox |
 
 ## Limitations
 
