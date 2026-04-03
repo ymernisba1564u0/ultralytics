@@ -568,12 +568,12 @@ ensemble_scheduling {
 
 DALI preprocessing works with all YOLO tasks that use the standard `LetterBox` pipeline:
 
-| Task                                        | Supported | Notes                                                                                                        |
-| ------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------ |
-| [Detection](../tasks/detect.md)             | ✅        | Standard letterbox preprocessing                                                                             |
-| [Segmentation](../tasks/segment.md)         | ✅        | Same preprocessing as detection                                                                              |
-| [Pose Estimation](../tasks/pose.md)         | ✅        | Same preprocessing as detection                                                                              |
-| [Oriented Detection (OBB)](../tasks/obb.md) | ✅        | Same preprocessing as detection                                                                              |
+| Task                                        | Supported | Notes                                                    |
+| ------------------------------------------- | --------- | -------------------------------------------------------- |
+| [Detection](../tasks/detect.md)             | ✅        | Standard letterbox preprocessing                         |
+| [Segmentation](../tasks/segment.md)         | ✅        | Same preprocessing as detection                          |
+| [Pose Estimation](../tasks/pose.md)         | ✅        | Same preprocessing as detection                          |
+| [Oriented Detection (OBB)](../tasks/obb.md) | ✅        | Same preprocessing as detection                          |
 | [Classification](../tasks/classify.md)      | ❌        | Uses torchvision transforms (center crop), not letterbox |
 
 ## Limitations
