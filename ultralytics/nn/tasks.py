@@ -1396,10 +1396,12 @@ class UnsafePickleError(ValueError):
         super().__init__(f"Unsafe pickle: blocked {kind} '{module}.{name}'")
 
 
-# Module prefixes allowed in pickle streams. Each entry matches exactly or as a dot-separated prefix
-# (e.g. "torch" matches "torch.nn.modules.conv" but not "torchevil").
-_SAFE_MODULES = frozenset(
+# Unified pickle allowlist. Module prefixes match exactly or with a dot-separated prefix
+# (e.g. "torch" matches "torch.nn.modules.conv" but not "torchevil"). Safe builtins are
+# stored as "builtins.<name>" — blocks dangerous builtins like getattr, eval, exec, __import__.
+_SAFE_PICKLE_ALLOWLIST = frozenset(
     {
+        # Module prefixes
         "torch",
         "torchvision",
         "ultralytics.nn",
@@ -1409,40 +1411,39 @@ _SAFE_MODULES = frozenset(
         "_codecs",
         "copyreg",
         "math",
-    }
-)
-
-# Specific builtin names allowed — blocks dangerous builtins like getattr, eval, exec, __import__.
-_SAFE_BUILTIN_NAMES = frozenset(
-    {
-        "set",
-        "frozenset",
-        "dict",
-        "list",
-        "tuple",
-        "bytes",
-        "bytearray",
-        "str",
-        "int",
-        "float",
-        "bool",
-        "complex",
-        "slice",
-        "type",
-        "range",
-        "enumerate",
-        "zip",
-        "map",
-        "filter",
-        "reversed",
-        "sorted",
+        # Safe builtins (as "builtins.<name>")
+        "builtins.set",
+        "builtins.frozenset",
+        "builtins.dict",
+        "builtins.list",
+        "builtins.tuple",
+        "builtins.bytes",
+        "builtins.bytearray",
+        "builtins.str",
+        "builtins.int",
+        "builtins.float",
+        "builtins.bool",
+        "builtins.complex",
+        "builtins.slice",
+        "builtins.type",
+        "builtins.range",
+        "builtins.enumerate",
+        "builtins.zip",
+        "builtins.map",
+        "builtins.filter",
+        "builtins.reversed",
+        "builtins.sorted",
     }
 )
 
 
-def _is_module_allowed(module):
-    """Check if a module is in the allowlist (exact match or dot-separated prefix)."""
-    return module in _SAFE_MODULES or any(module.startswith(m + ".") for m in _SAFE_MODULES)
+def _is_safe_pickle_global(module, name):
+    """Check if a pickle global is in the allowlist (exact match or dot-separated prefix)."""
+    if module in ("__builtin__", "builtins"):
+        return f"builtins.{name}" in _SAFE_PICKLE_ALLOWLIST
+    return module in _SAFE_PICKLE_ALLOWLIST or any(
+        module.startswith(m + ".") for m in _SAFE_PICKLE_ALLOWLIST if not m.startswith("builtins.")
+    )
 
 
 class SafeUnpickler(pickle.Unpickler):
@@ -1471,16 +1472,12 @@ class SafeUnpickler(pickle.Unpickler):
         Raises:
             UnsafePickleError: If strict=True and the module or builtin name is not in the allowlist.
         """
-        if module in ("__builtin__", "builtins"):
-            if name not in _SAFE_BUILTIN_NAMES:
-                if self.strict:
-                    raise UnsafePickleError("builtin", module, name)
-                return SafeClass
-        elif not _is_module_allowed(module):
-            if self.strict:
-                raise UnsafePickleError("module", module, name)
-            return SafeClass
-        return super().find_class(module, name)
+        if _is_safe_pickle_global(module, name):
+            return super().find_class(module, name)
+        if self.strict:
+            kind = "builtin" if module in ("__builtin__", "builtins") else "module"
+            raise UnsafePickleError(kind, module, name)
+        return SafeClass
 
 
 def _make_safe_pickle_module(strict):
