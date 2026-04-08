@@ -11,11 +11,48 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+class ResidualConvUnit(nn.Module):
+    """Residual convolution unit with two 3×3 convolutions and a residual connection."""
+
+    def __init__(self, features: int):
+        super().__init__()
+        self.conv1 = nn.Conv2d(features, features, kernel_size=3, stride=1, padding=1, bias=True)
+        self.conv2 = nn.Conv2d(features, features, kernel_size=3, stride=1, padding=1, bias=True)
+        self.relu = nn.ReLU(inplace=True)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        out = self.relu(x)
+        out = self.conv1(out)
+        out = self.relu(out)
+        out = self.conv2(out)
+        return out + x
+
+
+class FeatureFusionBlock(nn.Module):
+    """Fuse a skip connection with the upsampled path via residual conv units."""
+
+    def __init__(self, features: int):
+        super().__init__()
+        self.res_conv1 = ResidualConvUnit(features)
+        self.res_conv2 = ResidualConvUnit(features)
+        self.output_conv = nn.Conv2d(features, features, kernel_size=1, stride=1, padding=0, bias=True)
+
+    def forward(self, x: torch.Tensor, skip: torch.Tensor | None = None) -> torch.Tensor:
+        if skip is not None:
+            x = x + skip
+        x = self.res_conv1(x)
+        x = self.res_conv2(x)
+        x = F.interpolate(x, scale_factor=2, mode="bilinear", align_corners=True)
+        x = self.output_conv(x)
+        return x
+
+
 class DPTHead(nn.Module):
     """Dense Prediction Transformer head for monocular depth estimation.
 
     Fuses multi-scale features from a ViT encoder into a single-channel depth map
-    via reassemble + fusion layers, following the DPT architecture.
+    via reassemble + fusion layers, following the DPT architecture used in
+    Depth Anything V2.
     """
 
     def __init__(self, in_channels: int, features: int = 256, out_channels: list[int] | None = None):
@@ -25,17 +62,18 @@ class DPTHead(nn.Module):
             in_channels: Number of channels from the ViT encoder (embed_dim).
             features: Internal feature dimension for fusion layers.
             out_channels: Per-layer output channels for reassemble projections.
-                          If None, defaults to [features // 4, features // 2, features, features].
         """
         super().__init__()
         if out_channels is None:
             out_channels = [features // 4, features // 2, features, features]
 
+        # Step 1: Project from encoder embed_dim → out_channels[i] (1×1 conv)
         self.projects = nn.ModuleList([
             nn.Conv2d(in_channels, out_ch, kernel_size=1, bias=True)
             for out_ch in out_channels
         ])
 
+        # Step 2: Spatial resize to create multi-scale feature pyramid
         self.resize_layers = nn.ModuleList([
             nn.ConvTranspose2d(out_channels[0], out_channels[0], kernel_size=4, stride=4),
             nn.ConvTranspose2d(out_channels[1], out_channels[1], kernel_size=2, stride=2),
@@ -43,13 +81,21 @@ class DPTHead(nn.Module):
             nn.Conv2d(out_channels[3], out_channels[3], kernel_size=3, stride=2, padding=1),
         ])
 
-        self.refinenets = nn.ModuleList([
-            FeatureFusionBlock(features, out_channels[0]),
-            FeatureFusionBlock(features, out_channels[1]),
-            FeatureFusionBlock(features, out_channels[2]),
-            FeatureFusionBlock(features, out_channels[3]),
+        # Step 3: Project from out_channels[i] → features (1×1 conv, "layer_rn")
+        self.layer_rn = nn.ModuleList([
+            nn.Conv2d(out_ch, features, kernel_size=3, stride=1, padding=1, bias=False)
+            for out_ch in out_channels
         ])
 
+        # Step 4: Feature fusion refinement (bottom-up)
+        self.refinenets = nn.ModuleList([
+            FeatureFusionBlock(features),
+            FeatureFusionBlock(features),
+            FeatureFusionBlock(features),
+            FeatureFusionBlock(features),
+        ])
+
+        # Step 5: Output head → single channel depth
         self.head_conv1 = nn.Conv2d(features, features // 2, kernel_size=3, stride=1, padding=1)
         self.head_conv2 = nn.Conv2d(features // 2, 32, kernel_size=3, stride=1, padding=1)
         self.head_conv3 = nn.Conv2d(32, 1, kernel_size=1, stride=1, padding=0)
@@ -63,14 +109,15 @@ class DPTHead(nn.Module):
             features: List of 4 feature tensors from ViT layers, each (B, N, C).
 
         Returns:
-            Depth map tensor of shape (B, 1, H, W) at 4× patch resolution.
+            Depth map tensor of shape (B, 1, H, W).
         """
         out = []
         for i, x in enumerate(features):
-            # (B, N, C) -> (B, C, patch_h, patch_w) -> project -> resize
+            # (B, N, C) → (B, C, patch_h, patch_w) → project → resize → layer_rn
             x = x.permute(0, 2, 1).reshape(x.shape[0], x.shape[2], patch_h, patch_w)
             x = self.projects[i](x)
             x = self.resize_layers[i](x)
+            x = self.layer_rn[i](x)
             out.append(x)
 
         # Bottom-up fusion (layer 3 → 0)
@@ -79,45 +126,13 @@ class DPTHead(nn.Module):
         path = self.refinenets[1](path, out[1])
         path = self.refinenets[0](path, out[0])
 
-        # Final upsampling + head
-        out = F.interpolate(path, scale_factor=2, mode="bilinear", align_corners=True)
-        out = self.head_conv1(out)
-        out = F.relu(out, inplace=True)
+        # Output head
+        out = self.head_conv1(path)
+        out = F.interpolate(out, scale_factor=2, mode="bilinear", align_corners=True)
         out = self.head_conv2(out)
         out = F.relu(out, inplace=True)
         out = self.head_conv3(out)
         return F.relu(out, inplace=True)
-
-
-class FeatureFusionBlock(nn.Module):
-    """Fuse a skip connection with the upsampled path via residual convolutions."""
-
-    def __init__(self, features: int, in_channels: int):
-        super().__init__()
-        self.project = nn.Sequential(
-            nn.Conv2d(in_channels, features, kernel_size=1, bias=False),
-            nn.BatchNorm2d(features),
-            nn.ReLU(inplace=True),
-        ) if in_channels != features else nn.Identity()
-
-        self.res_conv1 = nn.Sequential(
-            nn.Conv2d(features, features, kernel_size=3, stride=1, padding=1, bias=False),
-            nn.BatchNorm2d(features),
-            nn.ReLU(inplace=True),
-        )
-        self.res_conv2 = nn.Sequential(
-            nn.Conv2d(features, features, kernel_size=3, stride=1, padding=1, bias=False),
-            nn.BatchNorm2d(features),
-            nn.ReLU(inplace=True),
-        )
-
-    def forward(self, x: torch.Tensor, skip: torch.Tensor | None = None) -> torch.Tensor:
-        if skip is not None:
-            x = F.interpolate(x, size=skip.shape[2:], mode="bilinear", align_corners=True)
-            x = x + self.project(skip)
-        x = self.res_conv1(x)
-        x = self.res_conv2(x)
-        return x
 
 
 class DepthAnythingV2(nn.Module):
@@ -184,25 +199,14 @@ class DepthAnythingV2(nn.Module):
 
     @torch.no_grad()
     def infer(self, x: torch.Tensor, input_size: int = 518) -> torch.Tensor:
-        """Convenience method: resize to input_size, predict, resize back.
-
-        Args:
-            x: Input RGB tensor (B, 3, H, W), any size.
-            input_size: Target size (must be divisible by 14).
-
-        Returns:
-            Depth map tensor (B, H, W) at original resolution.
-        """
+        """Convenience method: resize to input_size, predict, resize back."""
         _, _, h, w = x.shape
-        # Resize to input_size while keeping aspect ratio, pad to multiple of 14
         scale = input_size / max(h, w)
-        new_h, new_w = int(h * scale), int(w * scale)
-        new_h = (new_h // 14) * 14
-        new_w = (new_w // 14) * 14
+        new_h = max(14, (int(h * scale) // 14) * 14)
+        new_w = max(14, (int(w * scale) // 14) * 14)
         x = F.interpolate(x, size=(new_h, new_w), mode="bilinear", align_corners=True)
 
         depth = self.forward(x)
 
-        # Resize back to original
         depth = F.interpolate(depth.unsqueeze(1), size=(h, w), mode="bilinear", align_corners=True)
         return depth.squeeze(1)
