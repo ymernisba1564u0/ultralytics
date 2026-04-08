@@ -126,17 +126,10 @@ def _remap_state_dict(state_dict: dict) -> dict:
             mapped[new_k] = v
             continue
 
-        # depth_head.scratch.output_conv2.0 → depth_head.head_conv2
-        m = re.match(r"depth_head\.scratch\.output_conv2\.0\.(.*)", k)
+        # depth_head.scratch.output_conv2.{N} → depth_head.head_conv2.{N}
+        m = re.match(r"depth_head\.scratch\.output_conv2\.(\d+)\.(.*)", k)
         if m:
-            new_k = f"depth_head.head_conv2.{m.group(1)}"
-            mapped[new_k] = v
-            continue
-
-        # depth_head.scratch.output_conv2.2 → depth_head.head_conv3
-        m = re.match(r"depth_head\.scratch\.output_conv2\.2\.(.*)", k)
-        if m:
-            new_k = f"depth_head.head_conv3.{m.group(1)}"
+            new_k = f"depth_head.head_conv2.{m.group(1)}.{m.group(2)}"
             mapped[new_k] = v
             continue
 
