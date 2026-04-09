@@ -171,7 +171,7 @@ This is known as catastrophic forgetting - the model loses previously learned kn
 
 ### How many images do I need to fine-tune YOLO?
 
-There is no fixed minimum - results depend on the complexity of the task and the similarity to COCO. As a general guideline, starting with 100+ images per class is reasonable for prototyping, while 500+ images per class with diverse conditions (lighting, angles, backgrounds) produces more reliable results for production use.
+There is no fixed minimum - results depend on the complexity of the task, the number of classes, and how similar the domain is to COCO. More diverse images (varied lighting, angles, backgrounds) matter more than raw quantity. Start with what you have and scale up if validation metrics are insufficient.
 
 ### How do I fine-tune YOLO26 on a custom dataset?
 
