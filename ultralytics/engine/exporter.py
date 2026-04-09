@@ -694,7 +694,7 @@ class Exporter:
         """Export YOLO model to OpenVINO format."""
         from ultralytics.utils.export.openvino import torch2openvino
 
-        # OpenVINO <= 2025.1.0 error on macOS 15.4+: https://github.com/openvinotoolkit/openvino/issues/30023"
+        # OpenVINO <= 2025.1.0 error on macOS 15.4+: https://github.com/openvinotoolkit/openvino/issues/30023
         check_requirements("openvino>=2025.2.0" if MACOS and MACOS_VERSION >= "15.4" else "openvino>=2024.0.0")
         import openvino as ov
 
@@ -1024,7 +1024,7 @@ class Exporter:
 
         from ultralytics.utils.export.axelera import torch2axelera
 
-        output_dir = Path(f"{self.file.stem}_axelera_model")
+        output_dir = self.file.parent / f"{self.file.stem}_axelera_model"
         return torch2axelera(
             model=self.model,
             output_dir=output_dir,
