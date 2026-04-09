@@ -319,7 +319,7 @@ def torch2imx(
         )
 
     model_onnx = onnx.load(onnx_model)  # load onnx model
-    for k, v in metadata.items():
+    for k, v in (metadata or {}).items():
         meta = model_onnx.metadata_props.add()
         meta.key, meta.value = k, str(v)
 
