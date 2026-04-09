@@ -79,7 +79,7 @@ For most fine-tuning tasks, the default setting works well without any manual tu
 
 Freezing prevents specific layers from updating during training. This speeds up training and reduces [overfitting](https://www.ultralytics.com/glossary/overfitting) when the dataset is small relative to the model capacity.
 
-The `freeze` parameter accepts either an integer or a list. An integer `freeze=10` freezes the first 10 layers (0 through 9, which corresponds to the backbone in YOLO26). A list like `freeze=[0, 3, 5]` freezes only those specific layers, which is useful for experimenting with partial backbone freezing.
+The `freeze` parameter accepts either an integer or a list. An integer `freeze=10` freezes the first 10 layers (0 through 9, which corresponds to the backbone in YOLO26). A list can contain layer indices like `freeze=[0, 3, 5]` for partial backbone freezing, or module name strings like `freeze=["23.cv2"]` for fine-grained control over specific branches within a layer.
 
 !!! example
 
@@ -95,14 +95,21 @@ The `freeze` parameter accepts either an integer or a list. An integer `freeze=1
         model.train(data="custom.yaml", epochs=50, freeze=[0, 1, 2, 3, 4])
         ```
 
+    === "Freeze by module name"
+
+        ```python
+        # Freeze the box regression branch of the detection head
+        model.train(data="custom.yaml", epochs=50, freeze=["23.cv2"])
+        ```
+
 The right freeze depth depends on how similar the target domain is to the pretrained data and how much training data is available:
 
-| Scenario                      | Recommendation          | Rationale                                                   |
-| ----------------------------- | ----------------------- | ----------------------------------------------------------- |
-| Large dataset, similar domain | `freeze=None` (default) | Enough data to adapt all layers without overfitting         |
-| Small dataset, similar domain | `freeze=10`             | Preserves backbone features, reduces trainable parameters   |
-| Very small dataset            | `freeze=22`             | Only the detection head trains, minimizing overfitting risk |
-| Domain far from COCO          | `freeze=None`           | Backbone features may not transfer well and need retraining |
+| Scenario                      | Recommendation          | Rationale                                                       |
+| ----------------------------- | ----------------------- | --------------------------------------------------------------- |
+| Large dataset, similar domain | `freeze=None` (default) | Enough data to adapt all layers without overfitting             |
+| Small dataset, similar domain | `freeze=10`             | Preserves backbone features, reduces trainable parameters       |
+| Very small dataset            | `freeze=23`             | Only the detection head trains, minimizing overfitting risk     |
+| Domain far from COCO          | `freeze=None`           | Backbone features may not transfer well and need retraining     |
 
 Freeze depth can also be treated as a hyperparameter - trying a few values (0, 5, 10) and comparing validation mAP is a practical way to find the best setting for a specific dataset.
 
