@@ -338,6 +338,7 @@ class Tuner:
             ng = len(self.space)
 
             # Crossover
+            assert x.shape[1] == ng + 1, f"Expected {ng + 1} columns in data (fitness + {ng} hyperparameters), got {x.shape[1]}"
             genes = self._crossover(x)
 
             # Mutation
@@ -428,7 +429,7 @@ class Tuner:
             for j, d in enumerate(data):
                 try:
                     train_args["data"] = d
-                    train_args["save_dir"] = str(save_dir[j])  # pass save_dir to subprocess to ensure same path is used
+                    # train_args["save_dir"] = str(save_dir[j])  # pass save_dir to subprocess to ensure same path is used
                     # Train YOLO model with mutated hyperparameters (run in subprocess to avoid dataloader hang)
                     launch = [
                         __import__("sys").executable,
