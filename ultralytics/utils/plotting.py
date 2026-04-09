@@ -955,17 +955,14 @@ def plt_color_scatter(v, f, bins: int = 20, cmap: str = "viridis", alpha: float 
 
 
 @plt_settings()
-def plot_tune_results(
-    csv_file: str = "tune_results.csv", exclude_zero_fitness_points: bool = True, num_metrics_columns: int = 1
-):
-    """
-    Plot the evolution results stored in a 'tune_results.csv' file. The function generates a scatter plot for each key
-    in the CSV, color-coded based on fitness scores. The best-performing configurations are highlighted on the plots.
+def plot_tune_results(csv_file: str = "tune_results.csv", exclude_zero_fitness_points: bool = True):
+    """Plot the evolution results stored in a 'tune_results.csv' file. The function generates a scatter plot for each
+    key in the CSV, color-coded based on fitness scores. The best-performing configurations are highlighted on
+    the plots.
 
     Args:
         csv_file (str, optional): Path to the CSV file containing the tuning results.
         exclude_zero_fitness_points (bool, optional): Don't include points with zero fitness in tuning plots.
-        num_metrics_columns (int, optional): Number of initial columns in the CSV that are metrics (e.g., fitness) rather than hyperparameters.
 
     Examples:
         >>> plot_tune_results("path/to/tune_results.csv")
@@ -984,13 +981,15 @@ def plot_tune_results(
     csv_file = Path(csv_file)
     data = pl.read_csv(csv_file, infer_schema_length=None)
     keys = [x.strip() for x in data.columns]
-    fitness_keys = keys[:num_metrics_columns]  # metric keys (e.g., fitness)
-    keys = keys[num_metrics_columns:]  # hyperparameter keys
+    fitness_keys = {i: k for i, k in enumerate(keys) if "fitness" in k}  # metric keys (e.g., fitness)
+    hyp_keys = {i: k for i, k in enumerate(keys) if "fitness" not in k}  # hyperparameter keys
     x = data.to_numpy()
     fitness = x[:, 0]  # fitness
     if exclude_zero_fitness_points:
         mask = fitness > 0  # exclude zero-fitness points
         x, fitness = x[mask], fitness[mask]
+    if len(x) == 0:
+        return
     # Iterative sigma rejection on lower bound only
     for _ in range(3):  # max 3 iterations
         mean, std = fitness.mean(), fitness.std()
@@ -1000,22 +999,22 @@ def plot_tune_results(
             break
         x, fitness = x[mask], fitness[mask]
     j = np.argmax(fitness)  # max fitness index
-    n = math.ceil(len(keys) ** 0.5)  # columns and rows in plot
+    n = math.ceil(len(hyp_keys) ** 0.5)  # columns and rows in plot
     plt.figure(figsize=(10, 10), tight_layout=True)
-    for i, k in enumerate(keys):
-        v = x[:, i + num_metrics_columns]
+    for idx, (i, k) in enumerate(hyp_keys.items()):
+        v = x[:, i]
         mu = v[j]  # best single result
-        plt.subplot(n, n, i + 1)
+        plt.subplot(n, n, idx + 1)
         plt_color_scatter(v, fitness, cmap="viridis", alpha=0.8, edgecolors="none")
         plt.plot(mu, fitness.max(), "k+", markersize=15)
         plt.title(f"{k} = {mu:.3g}", fontdict={"size": 9})  # limit to 40 characters
         plt.tick_params(axis="both", labelsize=8)  # Set axis label size to 8
-        if i % n != 0:
+        if idx % n != 0:
             plt.yticks([])
     _save_one_file(csv_file.with_name("tune_scatter_plots.png"))
 
     # Fitness vs iteration
-    for i, k in enumerate(fitness_keys):
+    for i, k in fitness_keys.items():
         fitness = x[:, i]
         xx = range(1, len(fitness) + 1)
         plt.figure(figsize=(10, 6), tight_layout=True)

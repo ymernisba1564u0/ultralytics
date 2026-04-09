@@ -330,7 +330,7 @@ class Tuner:
             if len(csv_data) > 0:
                 fitness = csv_data[:, 0]  # first column
                 order = np.argsort(-fitness)
-                x = csv_data[order][:n]  # top-n sorted by fitness DESC
+                x = csv_data[order][:n, : len(self.space) + 1]  # top-n sorted by fitness DESC
 
         # Mutate if we have data, otherwise use defaults
         if x is not None:
@@ -423,11 +423,12 @@ class Tuner:
             all_fitness = []
             if not isinstance(data, (list, tuple)):
                 data = [data]
-            for d in data:
+            save_dir = [get_save_dir(get_cfg(train_args)) / Path(d).stem for d in data]
+            weights_dir = [s / "weights" for s in save_dir]
+            for j, d in enumerate(data):
                 try:
-                    save_dir = get_save_dir(get_cfg(train_args))
-                    weights_dir = save_dir / "weights"
                     train_args["data"] = d
+                    train_args["save_dir"] = str(save_dir[j])  # pass save_dir to subprocess to ensure same path is used
                     # Train YOLO model with mutated hyperparameters (run in subprocess to avoid dataloader hang)
                     launch = [
                         __import__("sys").executable,
@@ -436,7 +437,7 @@ class Tuner:
                     ]  # workaround yolo not found
                     cmd = [*launch, "train", *(f"{k}={v}" for k, v in train_args.items())]
                     return_code = subprocess.run(cmd, check=True).returncode
-                    ckpt_file = weights_dir / ("best.pt" if (weights_dir / "best.pt").exists() else "last.pt")
+                    ckpt_file = weights_dir[j] / ("best.pt" if (weights_dir[j] / "best.pt").exists() else "last.pt")
                     metrics = torch_load(ckpt_file)["train_metrics"]
                     assert return_code == 0, "training failed"
 
@@ -462,12 +463,12 @@ class Tuner:
                     break
             else:
                 # Save to CSV only if no MongoDB
-                log_row = [round(fitness, 5)] + all_fitness + [mutated_hyp[k] for k in self.space.keys()]
+                log_row = [round(fitness, 5)] + [mutated_hyp[k] for k in self.space.keys()] + all_fitness
                 headers = (
                     ""
                     if self.tune_csv.exists()
                     else (
-                        ",".join(["fitness", *[f"fitness-{Path(d).stem}" for d in data], *list(self.space.keys())])
+                        ",".join(["fitness", *list(self.space.keys()), *[f"fitness-{Path(d).stem}" for d in data]])
                         + "\n"
                     )
                 )
@@ -480,15 +481,19 @@ class Tuner:
             best_idx = fitness.argmax()
             best_is_current = best_idx == i
             if best_is_current:
-                best_save_dir = str(save_dir)
+                best_save_dir = save_dir
                 best_metrics = {k: round(v, 5) for k, v in metrics.items()}
-                for ckpt in weights_dir.glob("*.pt"):
-                    shutil.copy2(ckpt, self.tune_dir / "weights")
-            elif cleanup and best_save_dir:
-                shutil.rmtree(best_save_dir, ignore_errors=True)  # remove iteration dirs to reduce storage space
+                for j in range(len(data)):
+                    best_weights_dir = self.tune_dir / "weights" / Path(data[j]).stem
+                    best_weights_dir.mkdir(parents=True, exist_ok=True)
+                    for ckpt in weights_dir[j].glob("*.pt"):
+                        shutil.copy2(ckpt, best_weights_dir)
+            elif cleanup and len(best_save_dir):
+                for s in best_save_dir:
+                    shutil.rmtree(s, ignore_errors=True)  # remove iteration dirs to reduce storage space
 
             # Plot tune results
-            plot_tune_results(str(self.tune_csv), num_metrics_columns=len(data) + 1)
+            plot_tune_results(str(self.tune_csv))
 
             # Save and print tune results
             header = (
@@ -499,7 +504,7 @@ class Tuner:
                 f"{self.prefix}Best fitness model is {best_save_dir}"
             )
             LOGGER.info("\n" + header)
-            data = {k: float(x[best_idx, i + 1]) for i, k in enumerate(self.space.keys())}
+            data = {k: int(v) if k in CFG_INT_KEYS else float(v) for k, v in zip(self.space.keys(), x[best_idx, 1:])}
             YAML.save(
                 self.tune_dir / "best_hyperparameters.yaml",
                 data=data,
