@@ -134,7 +134,7 @@ def onnx2saved_model(
     return keras_model
 
 
-def keras2pb(keras_model, output_file: Path | str, prefix="") -> str:
+def keras2pb(keras_model, output_file: Path | str, prefix: str="") -> str:
     """Convert a Keras model to TensorFlow GraphDef (.pb) format.
 
     Args:
