@@ -19,7 +19,7 @@ def torch2ethos(
     """Export PyTorch model to Arm Ethos-U NPU using ExecuTorch.
 
     Args:
-        model (torch.nn.Module): PyTorch model to export.
+        torch_model (torch.nn.Module): PyTorch model to export.
         file (Path | str): Source model file path used to derive output names.
         sample_input (torch.Tensor): Example input tensor for tracing/export.
         metadata (dict | None, optional): Optional metadata to save as YAML.
