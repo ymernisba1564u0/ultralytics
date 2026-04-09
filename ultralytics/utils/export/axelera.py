@@ -53,7 +53,7 @@ def torch2axelera(
 
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    model_name = output_dir.stem
+    model_name = output_dir.stem.removesuffix("_axelera_model")
 
     axelera_model_metadata = extract_ultralytics_metadata(model)
     config = CompilerConfig(
