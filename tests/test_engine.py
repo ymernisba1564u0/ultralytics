@@ -10,6 +10,8 @@ from ultralytics import YOLO
 from ultralytics.cfg import get_cfg
 from ultralytics.engine.exporter import Exporter
 from ultralytics.models.yolo import classify, detect, segment
+from ultralytics.nn.distill_model import DistillationModel
+from ultralytics.nn.tasks import DetectionModel, load_checkpoint
 from ultralytics.utils import ASSETS, DEFAULT_CFG, WEIGHTS_DIR
 
 
@@ -138,6 +140,86 @@ def test_classify():
     assert test_func in pred.callbacks["on_predict_start"], "callback test failed"
     result = pred(source=ASSETS, model=trainer.best)
     assert len(result), "predictor test failed"
+
+
+def test_distill_detect():
+    """Test knowledge distillation pipeline for detection using YOLO models."""
+    overrides = {"data": "coco8.yaml", "model": "yolo26n.yaml", "imgsz": 32, "epochs": 1, "save": False}
+
+    # Build student and teacher models
+    student = DetectionModel("yolo26n.yaml", nc=80)
+    teacher = DetectionModel("yolo26s.yaml", nc=80)
+    student.args = get_cfg(DEFAULT_CFG, overrides)
+
+    # Create DistillationModel
+    model = DistillationModel(teacher_model=teacher, student_model=student)
+
+    # Train using the created DistillationModel
+    trainer = detect.DetectionTrainer(overrides=overrides)
+    trainer.model = model  # inject pre-built DistillationModel
+    trainer.add_callback("on_train_start", test_func)
+    assert test_func in trainer.callbacks["on_train_start"], "callback test failed"
+    trainer.train()
+
+    # Validator
+    cfg = get_cfg(DEFAULT_CFG)
+    cfg.data = "coco8.yaml"
+    cfg.imgsz = 32
+    val = detect.DetectionValidator(args=cfg)
+    val.add_callback("on_val_start", test_func)
+    assert test_func in val.callbacks["on_val_start"], "callback test failed"
+    val(model=trainer.best)
+
+    # Predictor
+    pred = detect.DetectionPredictor(overrides={"imgsz": [64, 64]})
+    pred.add_callback("on_predict_start", test_func)
+    assert test_func in pred.callbacks["on_predict_start"], "callback test failed"
+    # Confirm there is no issue with sys.argv being empty
+    with mock.patch.object(sys, "argv", []):
+        result = pred(source=ASSETS, model=MODEL)
+        assert len(result), "predictor test failed"
+
+
+def test_distill_resume(name: str = "distill", tmp_path: str = "distill"):
+    """Test knowledge distillation resumes from an incomplete checkpoint."""
+    overrides = {"data": "coco8.yaml", 
+                 "model": "yolo26n.yaml", 
+                 "imgsz": 32, 
+                 "epochs": 2, 
+                 "save": True,
+                 "plots": False,
+                 "workers": 0,
+                 "project": tmp_path,
+                 "name": name,
+                 "exist_ok": True}
+
+    # Build student and teacher models
+    student = DetectionModel("yolo26n.yaml", nc=80)
+    teacher = DetectionModel("yolo26s.yaml", nc=80)
+    student.args = get_cfg(DEFAULT_CFG, overrides)
+
+    # Create DistillationModel
+    model = DistillationModel(teacher_model=teacher, student_model=student)
+
+    # Train using the created DistillationModel
+    trainer = detect.DetectionTrainer(overrides=overrides)
+    trainer.model = model  # inject pre-built DistillationModel
+
+    def stop_after_first_epoch(trainer):
+        if trainer.epoch == 0:
+            trainer.stop = True
+
+    trainer.final_eval = lambda: None
+    trainer.add_callback("on_train_epoch_end", stop_after_first_epoch)
+    trainer.train()
+    _, ckpt = load_checkpoint(trainer.last)
+    assert ckpt["epoch"] == 0, "checkpoint should be resumable"
+
+    overrides["resume"] = trainer.last
+    trainer = detect.DetectionTrainer(overrides=overrides)
+    trainer.final_eval = lambda: None
+    trainer.train()
+    assert trainer.start_epoch == trainer.epoch == 1, "resume test failed"
 
 
 def test_nan_recovery():
