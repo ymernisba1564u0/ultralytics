@@ -1039,7 +1039,6 @@ class Exporter:
     def export_ethos(self, prefix=colorstr("Ethos:")):
         """Export YOLO model to Arm Ethos-U NPU ExecuTorch *.pte format."""
         assert TORCH_2_9, f"ExecuTorch requires torch>=2.9.0 but torch=={TORCH_VERSION} is installed"
-        check_executorch_requirements()
         from ultralytics.utils.export.ethos import torch2ethos
 
         return torch2ethos(self.model, self.file, self.im, metadata=self.metadata, prefix=prefix)
