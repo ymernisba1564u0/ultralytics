@@ -481,7 +481,10 @@ class Tuner:
             save_dir = (
                 [get_save_dir(get_cfg(train_args))]
                 if len(data) == 1
-                else [get_save_dir(get_cfg(train_args), name=name) for name in dataset_names]
+                else [
+                    get_save_dir(get_cfg(train_args), name=f"{name}-{datetime.now().strftime('%Y-%m-%d-%H:%M:%S')}")
+                    for name in dataset_names
+                ]
             )
             weights_dir = [s / "weights" for s in save_dir]
             metrics = {}
