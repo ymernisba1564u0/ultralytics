@@ -95,5 +95,5 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
 
     # Remove directories
     models = [path for x in {"*.mlpackage", "*_openvino_model"} for path in WEIGHTS_DIR.rglob(x)]
-    for directory in [WEIGHTS_DIR / "path with spaces", *models]:
+    for directory in [WEIGHTS_DIR / "test_assets", WEIGHTS_DIR / "path with spaces", *models]:
         shutil.rmtree(directory, ignore_errors=True)
