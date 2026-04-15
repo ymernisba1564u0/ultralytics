@@ -344,7 +344,9 @@ def test_labels_and_crops():
         crop_files = [f for p in crop_dirs for f in p.glob("*")]
         # Crop directories match detections
         crop_dir_names = {d.name for d in crop_dirs}
-        assert all(r.names.get(c) in crop_dir_names for c in cls_idxs), f"Crop dirs {crop_dir_names} don't match classes {cls_idxs}"
+        assert all(r.names.get(c) in crop_dir_names for c in cls_idxs), (
+            f"Crop dirs {crop_dir_names} don't match classes {cls_idxs}"
+        )
         # Same number of crops as detections
         crop_count = len([f for f in crop_files if im_name in f.name])
         assert crop_count == len(r.boxes.data), f"Crop count {crop_count} != detection count {len(r.boxes.data)}"
