@@ -10,14 +10,14 @@ import pytest
 def solution_assets():
     """Session-scoped fixture to cache solution test assets.
 
-    Downloads videos and other assets once to persistent directory (WEIGHTS_DIR/test_assets). Returns a dict mapping
+    Downloads videos and other assets once to persistent directory (WEIGHTS_DIR/solution_assets). Returns a dict mapping
     asset names to cached paths.
     """
     from ultralytics.utils import ASSETS_URL, WEIGHTS_DIR
     from ultralytics.utils.downloads import safe_download
 
     # Use persistent directory alongside weights
-    cache_dir = WEIGHTS_DIR / "test_assets"
+    cache_dir = WEIGHTS_DIR / "solution_assets"
     cache_dir.mkdir(parents=True, exist_ok=True)
 
     # Define all assets needed for solution tests
@@ -94,5 +94,5 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
 
     # Remove directories
     models = [path for x in {"*.mlpackage", "*_openvino_model"} for path in WEIGHTS_DIR.rglob(x)]
-    for directory in [WEIGHTS_DIR / "test_assets", WEIGHTS_DIR / "path with spaces", *models]:
+    for directory in [WEIGHTS_DIR / "solution_assets", WEIGHTS_DIR / "path with spaces", *models]:
         shutil.rmtree(directory, ignore_errors=True)
