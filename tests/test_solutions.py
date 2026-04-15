@@ -165,7 +165,7 @@ def process_video(solution, video_path: str, needs_frame_count: bool = False):
             solutions.ParkingManagement,
             False,
             "parking_video",
-            {"temp_model": "parking_model", "show": SHOW, "temp_json_file": "parking_areas"},
+            {"model": "parking_model", "show": SHOW, "json_file": "parking_areas"},
         ),
         (
             "StreamlitInference",
@@ -185,12 +185,11 @@ def test_solution(name, solution_class, needs_frame_count, video_key, kwargs_upd
     kwargs = {}
     for key, value in kwargs_update.items():
         if key.startswith("temp_"):
-            if value == "parking_model":
-                kwargs[key.replace("temp_", "")] = str(solution_assets["parking_model"])
-            elif value == "parking_areas":
-                kwargs[key.replace("temp_", "")] = str(solution_assets["parking_areas"])
-            else:
-                kwargs[key.replace("temp_", "")] = str(tmp_path / value)
+            kwargs[key.replace("temp_", "")] = str(tmp_path / value)
+        elif value == "parking_model":
+            kwargs[key] = str(solution_assets["parking_model"])
+        elif value == "parking_areas":
+            kwargs[key] = str(solution_assets["parking_areas"])
         else:
             kwargs[key] = value
 
