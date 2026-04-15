@@ -4,6 +4,7 @@
 # Includes all solutions except DistanceCalculation and the Security Alarm System.
 
 import os
+import shutil
 from unittest.mock import patch
 
 import cv2
@@ -183,13 +184,16 @@ def process_video(solution, video_path: str, needs_frame_count: bool = False):
         ),
     ],
 )
-def test_solution(name, solution_class, needs_frame_count, video, kwargs, tmp_path):
+def test_solution(name, solution_class, needs_frame_count, video, kwargs, tmp_path, solution_videos):
     """Test individual Ultralytics solution with video processing and parameter validation."""
+    # Get video path from session cache (avoids repeated downloads)
     if video:
-        if name != "ObjectCounterVertical":
-            safe_download(url=f"{ASSETS_URL}/{video}", dir=tmp_path)
-        else:
-            safe_download(url=f"{ASSETS_URL}/{VERTICAL_VIDEO}", dir=tmp_path)
+        video_name = VERTICAL_VIDEO if name == "ObjectCounterVertical" else video
+        cached_video = solution_videos[video_name]
+        # Copy to tmp_path for test isolation
+        video_path = tmp_path / video_name
+        shutil.copy2(cached_video, video_path)
+
     if name == "ParkingManager":
         safe_download(url=f"{ASSETS_URL}/{PARKING_AREAS_JSON}", dir=tmp_path)
         safe_download(url=f"{ASSETS_URL}/{PARKING_MODEL}", dir=tmp_path)
@@ -207,10 +211,10 @@ def test_solution(name, solution_class, needs_frame_count, video, kwargs, tmp_pa
         else:
             kwargs_updated[key] = kwargs[key]
 
-    video = VERTICAL_VIDEO if name == "ObjectCounterVertical" else video
+    video_name = VERTICAL_VIDEO if name == "ObjectCounterVertical" else video
     process_video(
         solution=solution_class(**kwargs_updated),
-        video_path=str(tmp_path / video),
+        video_path=str(tmp_path / video_name),
         needs_frame_count=needs_frame_count,
     )
 

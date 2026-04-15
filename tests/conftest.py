@@ -3,6 +3,41 @@
 import shutil
 from pathlib import Path
 
+import pytest
+
+
+@pytest.fixture(scope="session")
+def solution_videos(tmp_path_factory):
+    """
+    Session-scoped fixture to cache solution test videos.
+
+    Downloads videos once per test session to avoid repeated downloads.
+    Returns a dict mapping video names to cached paths.
+    """
+    from ultralytics.utils import ASSETS_URL
+    from ultralytics.utils.downloads import safe_download
+
+    # Use a persistent directory for the session
+    cache_dir = tmp_path_factory.mktemp("solution_videos", numbered=False)
+
+    # Define videos needed for solution tests
+    videos = {
+        "solutions_ci_demo.mp4",
+        "decelera_landscape_min.mov",
+        "solution_ci_pose_demo.mp4",
+        "solution_ci_parking_demo.mp4",
+        "solution_vertical_demo.mp4",
+    }
+
+    video_paths = {}
+    for video in videos:
+        video_path = cache_dir / video
+        if not video_path.exists():
+            safe_download(url=f"{ASSETS_URL}/{video}", dir=cache_dir)
+        video_paths[video] = video_path
+
+    return video_paths
+
 
 def pytest_addoption(parser):
     """Add custom command-line options to pytest."""
