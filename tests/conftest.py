@@ -8,11 +8,10 @@ import pytest
 
 @pytest.fixture(scope="session")
 def solution_assets():
-    """
-    Session-scoped fixture to cache solution test assets.
+    """Session-scoped fixture to cache solution test assets.
 
-    Downloads videos and other assets once to persistent directory (WEIGHTS_DIR/test_assets).
-    Returns a dict mapping asset names to cached paths.
+    Downloads videos and other assets once to persistent directory (WEIGHTS_DIR/test_assets). Returns a dict mapping
+    asset names to cached paths.
     """
     from ultralytics.utils import ASSETS_URL, WEIGHTS_DIR
     from ultralytics.utils.downloads import safe_download
