@@ -10,8 +10,8 @@ import pytest
 def solution_assets():
     """Session-scoped fixture to cache solution test assets.
 
-    Downloads videos and other assets once to persistent directory (WEIGHTS_DIR/solution_assets). Returns a dict mapping
-    asset names to cached paths.
+    Lazily downloads solution assets into a persistent directory (WEIGHTS_DIR/solution_assets) and returns a callable
+    that resolves asset names to cached paths.
     """
     from ultralytics.utils import ASSETS_URL, WEIGHTS_DIR
     from ultralytics.utils.downloads import safe_download
@@ -34,13 +34,17 @@ def solution_assets():
     }
 
     asset_paths = {}
-    for name, filename in assets.items():
-        asset_path = cache_dir / filename
-        if not asset_path.exists():
-            safe_download(url=f"{ASSETS_URL}/{filename}", dir=cache_dir)
-        asset_paths[name] = asset_path
 
-    return asset_paths
+    def get_asset(name):
+        """Return the cached path for a named solution asset, downloading it on first use."""
+        if name not in asset_paths:
+            asset_path = cache_dir / assets[name]
+            if not asset_path.exists():
+                safe_download(url=f"{ASSETS_URL}/{asset_path.name}", dir=cache_dir)
+            asset_paths[name] = asset_path
+        return asset_paths[name]
+
+    return get_asset
 
 
 def pytest_addoption(parser):
