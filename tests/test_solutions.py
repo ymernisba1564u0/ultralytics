@@ -210,7 +210,7 @@ def test_left_click_selection():
     dc = solutions.DistanceCalculation()
     dc.boxes, dc.track_ids = [[10, 10, 50, 50]], [1]
     dc.mouse_event_for_distance(cv2.EVENT_LBUTTONDOWN, 30, 30, None, None)
-    assert 1 in dc.selected_boxes
+    assert 1 in dc.selected_boxes, f"Expected track_id 1 in selected_boxes, got {dc.selected_boxes}"
 
 
 def test_right_click_reset():
@@ -218,8 +218,8 @@ def test_right_click_reset():
     dc = solutions.DistanceCalculation()
     dc.selected_boxes, dc.left_mouse_count = {1: [10, 10, 50, 50]}, 1
     dc.mouse_event_for_distance(cv2.EVENT_RBUTTONDOWN, 0, 0, None, None)
-    assert not dc.selected_boxes
-    assert dc.left_mouse_count == 0
+    assert not dc.selected_boxes, f"Expected empty selected_boxes after reset, got {dc.selected_boxes}"
+    assert dc.left_mouse_count == 0, f"Expected left_mouse_count=0 after reset, got {dc.left_mouse_count}"
 
 
 def test_parking_json_none():
@@ -239,7 +239,7 @@ def test_analytics_graph_not_supported():
         analytics.process(im0=np.zeros((640, 480, 3), dtype=np.uint8), frame_number=0)
         assert False, "Expected ValueError for unsupported chart type"
     except ValueError as e:
-        assert "Unsupported analytics_type" in str(e)
+        assert "Unsupported analytics_type" in str(e), f"Expected 'Unsupported analytics_type' in error, got: {e}"
 
 
 def test_area_chart_padding():
@@ -247,7 +247,7 @@ def test_area_chart_padding():
     analytics = solutions.Analytics(analytics_type="area")
     analytics.update_graph(frame_number=1, count_dict={"car": 2}, plot="area")
     plot_im = analytics.update_graph(frame_number=2, count_dict={"car": 3, "person": 1}, plot="area")
-    assert plot_im is not None
+    assert plot_im is not None, "Area chart plot returned None"
 
 
 def test_config_update_method_with_invalid_argument():
@@ -257,7 +257,7 @@ def test_config_update_method_with_invalid_argument():
         obj.update(invalid_key=123)
         assert False, "Expected ValueError for invalid update argument"
     except ValueError as e:
-        assert "is not a valid solution argument" in str(e)
+        assert "is not a valid solution argument" in str(e), f"Expected validation error message, got: {e}"
 
 
 def test_plot_with_no_masks():
@@ -265,7 +265,7 @@ def test_plot_with_no_masks():
     im0 = np.zeros((640, 480, 3), dtype=np.uint8)
     isegment = solutions.InstanceSegmentation(model="yolo26n-seg.pt")
     results = isegment(im0)
-    assert results.plot_im is not None
+    assert results.plot_im is not None, "Instance segmentation plot returned None"
 
 
 def test_streamlit_handle_video_upload_creates_file():
@@ -281,10 +281,11 @@ def test_streamlit_handle_video_upload_creates_file():
         output_path = "ultralytics.mp4"
     else:
         output_path = None
-    assert output_path == "ultralytics.mp4"
-    assert os.path.exists("ultralytics.mp4")
+    assert output_path == "ultralytics.mp4", f"Expected output_path 'ultralytics.mp4', got {output_path}"
+    assert os.path.exists("ultralytics.mp4"), "ultralytics.mp4 file not created"
     with open("ultralytics.mp4", "rb") as f:
-        assert f.read() == b"fake video content"
+        content = f.read()
+        assert content == b"fake video content", f"File content mismatch: {content}"
     os.remove("ultralytics.mp4")
 
 
@@ -319,7 +320,7 @@ def test_similarity_search_complete(tmp_path):
         img.save(image_dir / f"test_image_{i}.jpg")
     searcher = solutions.VisualAISearch(data=str(image_dir))
     results = searcher("a red and white object")
-    assert results
+    assert results, "Similarity search returned empty results"
 
 
 def test_distance_calculation_process_method():
@@ -337,9 +338,9 @@ def test_distance_calculation_process_method():
     frame = np.zeros((480, 640, 3), dtype=np.uint8)
     with patch.object(dc, "extract_tracks"), patch.object(dc, "display_output"), patch("cv2.setMouseCallback"):
         result = dc.process(frame)
-    assert isinstance(result, SolutionResults)
-    assert result.total_tracks == 2
-    assert result.pixels_distance > 0
+    assert isinstance(result, SolutionResults), f"Expected SolutionResults, got {type(result)}"
+    assert result.total_tracks == 2, f"Expected 2 tracks, got {result.total_tracks}"
+    assert result.pixels_distance > 0, f"Expected positive distance, got {result.pixels_distance}"
 
 
 def test_object_crop_with_show_True():
