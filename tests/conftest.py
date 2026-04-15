@@ -7,36 +7,41 @@ import pytest
 
 
 @pytest.fixture(scope="session")
-def solution_videos(tmp_path_factory):
+def solution_assets():
     """
-    Session-scoped fixture to cache solution test videos.
+    Session-scoped fixture to cache solution test assets.
 
-    Downloads videos once per test session to avoid repeated downloads.
-    Returns a dict mapping video names to cached paths.
+    Downloads videos and other assets once to persistent directory (WEIGHTS_DIR/test_assets).
+    Returns a dict mapping asset names to cached paths.
     """
-    from ultralytics.utils import ASSETS_URL
+    from ultralytics.utils import ASSETS_URL, WEIGHTS_DIR
     from ultralytics.utils.downloads import safe_download
 
-    # Use a persistent directory for the session
-    cache_dir = tmp_path_factory.mktemp("solution_videos", numbered=False)
+    # Use persistent directory alongside weights
+    cache_dir = WEIGHTS_DIR / "test_assets"
+    cache_dir.mkdir(parents=True, exist_ok=True)
 
-    # Define videos needed for solution tests
-    videos = {
-        "solutions_ci_demo.mp4",
-        "decelera_landscape_min.mov",
-        "solution_ci_pose_demo.mp4",
-        "solution_ci_parking_demo.mp4",
-        "solution_vertical_demo.mp4",
+    # Define all assets needed for solution tests
+    assets = {
+        # Videos
+        "demo_video": "solutions_ci_demo.mp4",
+        "crop_video": "decelera_landscape_min.mov",
+        "pose_video": "solution_ci_pose_demo.mp4",
+        "parking_video": "solution_ci_parking_demo.mp4",
+        "vertical_video": "solution_vertical_demo.mp4",
+        # Parking manager files
+        "parking_areas": "solution_ci_parking_areas.json",
+        "parking_model": "solutions_ci_parking_model.pt",
     }
 
-    video_paths = {}
-    for video in videos:
-        video_path = cache_dir / video
-        if not video_path.exists():
-            safe_download(url=f"{ASSETS_URL}/{video}", dir=cache_dir)
-        video_paths[video] = video_path
+    asset_paths = {}
+    for name, filename in assets.items():
+        asset_path = cache_dir / filename
+        if not asset_path.exists():
+            safe_download(url=f"{ASSETS_URL}/{filename}", dir=cache_dir)
+        asset_paths[name] = asset_path
 
-    return video_paths
+    return asset_paths
 
 
 def pytest_addoption(parser):
