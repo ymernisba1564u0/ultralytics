@@ -69,6 +69,10 @@ YOLO26 builds upon the versatile model range established by earlier Ultralytics 
 
 This unified framework ensures YOLO26 is applicable across real-time detection, segmentation, classification, pose estimation, and oriented object detection — all with training, validation, inference, and export support.
 
+!!! note "Architecture-only variants"
+
+    [`yolo26-p2.yaml`](https://github.com/ultralytics/ultralytics/blob/main/ultralytics/cfg/models/26/yolo26-p2.yaml) and [`yolo26-p6.yaml`](https://github.com/ultralytics/ultralytics/blob/main/ultralytics/cfg/models/26/yolo26-p6.yaml) add a P2 (small-object) or P6 (large-input) detection head and are shipped as YAML architectures only — no `yolo26n-p2.pt` or `yolo26n-p6.pt` weights are released. Load them via the YAML (e.g. `YOLO("yolo26-p6.yaml")`) and train from scratch.
+
 ---
 
 ## Performance Metrics
