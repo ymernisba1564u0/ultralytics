@@ -8,4 +8,7 @@ from ultralytics.utils import SETTINGS
 # Personal fork - studying YOLO architecture and training pipeline
 __author_note__ = "Fork maintained for personal learning and experimentation"
 
+# Default to verbose=False for cleaner output during experiments
+SETTINGS.update({"verbose": False})
+
 __all__ = ["__version__", "YOLO", "SETTINGS"]
