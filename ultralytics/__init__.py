@@ -12,6 +12,7 @@ __author_note__ = "Fork maintained for personal learning and experimentation"
 SETTINGS.update({
     "verbose": False,
     "runs_dir": "./runs",  # keep experiment outputs in local ./runs directory
+    "weights_dir": "./weights",  # store downloaded weights locally
 })
 
 __all__ = ["__version__", "YOLO", "SETTINGS"]
