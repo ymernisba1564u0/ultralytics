@@ -13,6 +13,7 @@ SETTINGS.update({
     "verbose": False,
     "runs_dir": "./runs",  # keep experiment outputs in local ./runs directory
     "weights_dir": "./weights",  # store downloaded weights locally
+    "workers": 4,  # limit dataloader workers to avoid CPU overload on my machine
 })
 
 __all__ = ["__version__", "YOLO", "SETTINGS"]
