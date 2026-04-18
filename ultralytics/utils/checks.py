@@ -93,38 +93,17 @@ def check_requirements(requirements, exclude: tuple = (), install: bool = True) 
         LOGGER.info(f"Missing packages detected: {missing}")
         if install:
             import subprocess
-            LOGGER.info(f"Attempting to install missing packages...")
+            # Use --quiet flag to reduce pip output noise during auto-install
+            LOGGER.info(f"Attempting to auto-install missing packages: {missing}")
             result = subprocess.run(
-                [sys.executable, "-m", "pip", "install", *missing],
+                [sys.executable, "-m", "pip", "install", "--quiet"] + missing,
                 capture_output=True,
                 text=True,
             )
             if result.returncode != 0:
-                LOGGER.warning(f"Failed to install packages: {result.stderr}")
+                LOGGER.warning(f"WARNING ⚠️ Failed to install some packages: {result.stderr.strip()}")
                 return False
-            LOGGER.info("Packages installed successfully.")
+            LOGGER.info("Auto-install complete.")
         else:
-            LOGGER.warning(f"Please install required packages: pip install {pkgs_str}")
             return False
     return True
-
-
-def check_imshow(warn: bool = False) -> bool:
-    """Check if cv2.imshow() can be used in the current environment."""
-    try:
-        import cv2
-        cv2.imshow("test", __import__("numpy").zeros((1, 1, 3), dtype="uint8"))
-        cv2.waitKey(1)
-        cv2.destroyAllWindows()
-        return True
-    except Exception as e:
-        if warn:
-            LOGGER.warning(f"WARNING ⚠️ Environment does not support cv2.imshow(): {e}")
-        return False
-
-
-def _compare_versions(v1: str, v2: str) -> int:
-    """Compare two version strings. Returns -1, 0, or 1."""
-    from packaging.version import Version
-    a, b = Version(v1), Version(v2)
-    return 0 if a == b else (1 if a > b else -1)
