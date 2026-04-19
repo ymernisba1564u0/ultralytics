@@ -93,17 +93,15 @@ def check_requirements(requirements, exclude: tuple = (), install: bool = True) 
         LOGGER.info(f"Missing packages detected: {missing}")
         if install:
             import subprocess
-            # Use --quiet flag to reduce pip output noise during auto-install
-            LOGGER.info(f"Attempting to auto-install missing packages: {missing}")
+            # Use --quiet to suppress pip output noise during auto-install
             result = subprocess.run(
                 [sys.executable, "-m", "pip", "install", "--quiet"] + missing,
                 capture_output=True,
-                text=True,
             )
             if result.returncode != 0:
-                LOGGER.warning(f"WARNING ⚠️ Failed to install some packages: {result.stderr.strip()}")
+                LOGGER.warning(f"WARNING ⚠️ Failed to install packages: {missing}")
                 return False
-            LOGGER.info("Auto-install complete.")
+            LOGGER.info(f"Successfully installed: {missing}")
         else:
             return False
     return True
