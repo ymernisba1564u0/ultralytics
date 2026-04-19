@@ -82,9 +82,12 @@ def model_info(model, detailed=False, verbose=True):
     n_l = len(list(model.modules()))
 
     if verbose:
-        # Also show parameter count in millions for readability
+        # Show parameter count in both raw and millions for readability
+        # Also include trainable % to quickly gauge how much of the model is frozen
+        trainable_pct = 100.0 * n_g / n_p if n_p > 0 else 0.0
         LOGGER.info(
-            f"Model summary: {n_l} layers, {n_p:,} parameters ({n_p / 1e6:.2f}M), {n_g:,} gradients"
+            f"Model summary: {n_l} layers, {n_p:,} parameters ({n_p / 1e6:.2f}M), "
+            f"{n_g:,} gradients ({trainable_pct:.1f}% trainable)"
         )
         if detailed:
             for name, p in model.named_parameters():
@@ -100,9 +103,4 @@ def copy_attr(a, b, include=(), exclude=()):
         setattr(a, k, v)
 
 
-def strip_optimizer(f, s=""):
-    """Strip optimizer from saved checkpoint to reduce file size.
-
-    Args:
-        f (str | Path): Path to checkpoint file.
-        s (str): O
+def st
