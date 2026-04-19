@@ -73,13 +73,19 @@ def model_info(model, detailed=False, verbose=True):
         model (nn.Module): PyTorch model.
         detailed (bool): Whether to print per-layer details.
         verbose (bool): Whether to print output.
+
+    Returns:
+        tuple: (n_layers, n_params, n_gradients)
     """
     n_p = get_num_params(model)
     n_g = get_num_gradients(model)
     n_l = len(list(model.modules()))
 
     if verbose:
-        LOGGER.info(f"Model summary: {n_l} layers, {n_p:,} parameters, {n_g:,} gradients")
+        # Also show parameter count in millions for readability
+        LOGGER.info(
+            f"Model summary: {n_l} layers, {n_p:,} parameters ({n_p / 1e6:.2f}M), {n_g:,} gradients"
+        )
         if detailed:
             for name, p in model.named_parameters():
                 LOGGER.info(f"  {name}: {list(p.shape)}, grad={p.requires_grad}")
@@ -99,24 +105,4 @@ def strip_optimizer(f, s=""):
 
     Args:
         f (str | Path): Path to checkpoint file.
-        s (str): Output path; if empty, overwrites input.
-    """
-    x = torch.load(f, map_location=torch.device("cpu"))
-    if "optimizer" in x:
-        x["optimizer"] = None
-    if "best_fitness" in x:
-        x["best_fitness"] = None
-    torch.save(x, s or f)
-    mb = Path(s or f).stat().st_size / 1e6
-    LOGGER.info(f"Optimizer stripped from '{f}', saved to '{s or f}' ({mb:.1f} MB)")
-
-
-@contextmanager
-def torch_distributed_zero_first(local_rank: int):
-    """Ensure all processes wait for rank-0 to complete a task in distributed training."""
-    initialized = torch.distributed.is_available() and torch.distributed.is_initialized()
-    if initialized and local_rank not in (-1, 0):
-        torch.distributed.barrier()
-    yield
-    if initialized and local_rank == 0:
-        torch.distributed.barrier()
+        s (str): O
