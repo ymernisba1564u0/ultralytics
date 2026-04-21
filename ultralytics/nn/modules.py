@@ -73,7 +73,11 @@ class C2f(nn.Module):
 
 
 class SPPF(nn.Module):
-    """Spatial Pyramid Pooling - Fast (SPPF) layer."""
+    """Spatial Pyramid Pooling - Fast (SPPF) layer.
+
+    Replaces the original SPP module with a faster equivalent using sequential
+    max-pooling operations instead of parallel pooling at multiple scales.
+    """
 
     def __init__(self, c1, c2, k=5):
         """Initialize SPPF with input/output channels and pooling kernel size."""
@@ -81,24 +85,5 @@ class SPPF(nn.Module):
         c_ = c1 // 2  # hidden channels
         self.cv1 = Conv(c1, c_, 1, 1)
         self.cv2 = Conv(c_ * 4, c2, 1, 1)
-        self.m = nn.MaxPool2d(kernel_size=k, stride=1 concatenated maxing at multiple scales."""
-        x)
-        y2 = self.m(y1)
-        return self.cv2(torch.cat((x, y1, y2, self.m(y2)), 1))
-
-
-class DFL(nn.Module):
-    """Distribution Focal Loss (DFL) module for bounding box regression."""
-
-    def __init__(self, c1=16):
-        """Initialize DFL module with number of bins c1."""
-        super().__init__()
-        self.conv = nn.Conv2d(c1, 1, 1, bias=False).requires_grad_(False)
-        x = torch.arange(c1, dtype=torch.float)
-        self.conv.weight.data[:] = nn.Parameter(x.view(1, c1, 1, 1))
-        self.c1 = c1
-
-    def forward(self, x):
-        """Apply DFL to compute soft distribution of bounding box coordinates."""
-        b, c, a = x.shape  # batch, channels, anchors
-        return self.conv(x.view(b, 4, self.c1, a).transpose(2, 1).softmax(1)).view(b, 4, a)
+        # k=5 gives an effective receptive field equivalent to SPP with pools of 5, 9, 13
+        self.m = nn.MaxPool2d(kernel_size=k, stride=1, padding=k // 2)
