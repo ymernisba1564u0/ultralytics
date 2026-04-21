@@ -67,8 +67,9 @@ class BaseModel(nn.Module):
         model_info(self, verbose=verbose)
 
     def load(self, weights):
-        """Load weights into the model."""
+        """Load weights into the model, transferring only matching layers."""
         csd = weights.float().state_dict()
+        # Only transfer weights where both key name and tensor shape match
         csd = {k: v for k, v in csd.items() if k in self.state_dict() and
                self.state_dict()[k].shape == v.shape}
         self.load_state_dict(csd, strict=False)
@@ -79,48 +80,4 @@ class DetectionModel(BaseModel):
     """YOLO detection model."""
 
     def __init__(self, cfg='yolov8n.yaml', ch=3, nc=None):
-        """Initialize DetectionModel with config, input channels, and number of classes."""
-        super().__init__()
-        import yaml
-        with open(cfg, encoding='ascii', errors='ignore') as f:
-            self.yaml = yaml.safe_load(f)
-
-        ch = self.yaml.get('ch', ch)
-        if nc and nc != self.yaml.get('nc'):
-            LOGGER.info(f"Overriding model.yaml nc={self.yaml['nc']} with nc={nc}")
-            self.yaml['nc'] = nc
-
-        self.model, self.save = parse_model(self.yaml, ch=[ch])
-        self.names = {i: f'{i}' for i in range(self.yaml['nc'])}
-        self.inplace = self.yaml.get('inplace', True)
-
-        # Initialize weights
-        self._initialize_weights()
-
-    def _initialize_weights(self):
-        """Initialize model weights to random values."""
-        for m in self.modules():
-            if isinstance(m, nn.BatchNorm2d):
-                m.eps = 1e-3
-                m.momentum = 0.03
-
-    def forward(self, x, augment=False):
-        """Forward pass, optionally with test-time augmentation."""
-        if augment:
-            return self._forward_augment(x)
-        return self._forward_once(x)
-
-    def _forward_augment(self, x):
-        """Augmented inference with flipping and scaling."""
-        img_size = x.shape[-2:]
-        s = [1, 0.83, 0.67]
-        f = [None, 3, None]  # flip (2-ud, 3-lr)
-        y = []
-        for si, fi in zip(s, f):
-            xi = torch.nn.functional.interpolate(x, size=[int(sz * si) for sz in img_size],
-                                                  mode='bilinear', align_corners=False)
-            if fi:
-                xi = torch.flip(xi, [fi])
-            yi = self._forward_once(xi)
-            y.append(yi)
-        return torch.cat(y, dim=1)
+        """Initialize DetectionModel with conf
